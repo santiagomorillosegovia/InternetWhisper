@@ -1,10 +1,7 @@
 import asyncio
 import json
-import re
 import time
 from typing import Any, AsyncGenerator
-import aiohttp
-from bs4 import BeautifulSoup
 import numpy as np
 import pandas as pd
 from models.document import Document
@@ -45,36 +42,27 @@ class Retriever:
             search_results = SearchResult(
                 items=[SearchDoc(link=doc.url) for doc in documents]
             )
-            yield {"event": "search", "data": json.dumps(search_results.model_dump())}
-
         else:
             search_results = await self.searcher.run(query)
-            yield {"event": "search", "data": json.dumps(search_results.model_dump())}
+        yield {"event": "search", "data": json.dumps(search_results.model_dump())}
 
+        if not quality_cache:
             documents = await self.search_for_documents(search_results, query_vector, k)
 
         context = "\n".join([doc.text for doc in documents])
         yield {"event": "context", "data": context}
 
         if not quality_cache:
-            insertables = []
-            for document in documents:
-                results = await self.cache.find_similar(document.vector, k=1)
-                if not results:
-                    await self.cache.write(documents)
-                else:
-                    if results[0].similarity < 0.97:
-                        insertables.append(document)
-
-            await self.cache.write(insertables)
+            await self.cache.write(documents)
 
     async def search_for_documents(
         self, search_results, query_vector, k
     ) -> list[Document]:
         """Searches for relevant information on the internet."""
 
-        results = search_results.model_dump()
         start = time.perf_counter()
+
+        results = search_results.model_dump()
         tasks = [self.scraper.fetch(item["link"]) for item in results["items"]]
         pages = await asyncio.gather(*tasks)
 
@@ -88,11 +76,15 @@ class Retriever:
                 for split in splits:
                     documents.append({"text": split, "url": page["url"]})
 
-        start = time.perf_counter()
-        embeddings = await self.embeddings.run([doc["text"] for doc in documents])
-        print("EMBEDDING TIME:", time.perf_counter() - end)
+        embedding_start_time = time.perf_counter()
+        texts = [doc["text"] for doc in documents]
+        embeddings = await self.embeddings.run(texts)
+
         for i, vector in enumerate(embeddings):
             documents[i]["vector"] = vector
+
+        embedding_time = time.perf_counter() - embedding_start_time
+        print("EMBEDDING TIME:", embedding_time)
 
         relevant_documents = await self.get_most_similar(query_vector, documents, k)
 
@@ -123,6 +115,7 @@ class Retriever:
             cache_score = sum(
                 doc.similarity for doc in documents if doc.similarity is not None
             ) / len(documents)
+
             print("CACHE SCORE", cache_score)
             return cache_score > treshold
         return False

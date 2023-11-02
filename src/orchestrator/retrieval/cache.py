@@ -63,7 +63,18 @@ class RedisVectorCache(VectorDbCache):
 
         return list(documents)
 
+    async def get_insertables(self, documents: list[Document]) -> list[Document]:
+        insertables = []
+        for document in documents:
+            results = await self.find_similar(document.vector, k=1)
+            if not results:
+                insertables.append(document)
+            elif results[0].similarity < 0.97:
+                insertables.append(document)
+        return insertables
+
     async def write(self, documents: list[Document]):
+        documents = await self.get_insertables(documents)
         pipeline = self.client.pipeline()
         for document in documents:
             SHA256.update(document.text.encode("utf-8"))
