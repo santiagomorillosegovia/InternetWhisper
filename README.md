@@ -4,6 +4,7 @@
 
 Based in You.com and Google's Bard, this project is a conversational generative artificial intelligence chatbot that can access the internet. It is designed to provide real-time information and engage in conversations with users. To enhance its performance, the chatbot utilizes a Redis vector database (Redis Vector DB cache) to store previously retrieved information, reducing the need to query the internet for the same data repeatedly. It also leverages the Google Search API for website querying.
 
+![ezgif-5-4b30015e27](https://github.com/santiagomorillosegovia/InternetWhisper/assets/28943730/26840b24-92d3-4ddf-bbd1-82cc6b992c7f)
 
 ## Getting Started
 
