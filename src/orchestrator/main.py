@@ -1,8 +1,8 @@
 from typing import AsyncGenerator
 from fastapi import FastAPI
 from sse_starlette.sse import EventSourceResponse
+from util import logger
 
-import logging
 import prompt
 import openai
 from retrieval import Retriever
@@ -13,9 +13,9 @@ from retrieval.embeddings import OpenAIEmbeddings, RemoteEmbeddings
 from retrieval.splitter import LangChainSplitter
 
 
-# setup loggers
-logging.config.fileConfig("logging.conf", disable_existing_loggers=False)  # type: ignore
-logger = logging.getLogger(__name__)
+# # setup loggers
+# logging.config.fileConfig("logging.conf", disable_existing_loggers=False)  # type: ignore
+# logger = logging.getLogger(__name__)
 app = FastAPI()
 
 
@@ -44,8 +44,11 @@ async def event_generator(query) -> AsyncGenerator[dict, None]:
     # redis.init_test()
     try:
         redis.init_index(vector_dimension=embeddings.vector_dimension)
+        logger.info(
+            f"Created index with vector dimensions {embeddings.vector_dimension}"
+        )
     except:
-        logger.info("Index already created.")
+        logger.info("Index already exists.")
 
     retriever = Retriever(
         cache=redis,
