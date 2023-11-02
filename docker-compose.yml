@@ -1,0 +1,67 @@
+version: '3'
+services:
+
+  orchestrator:
+    build: ./src/orchestrator
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+    ports:
+      - 8000:80
+    volumes:
+      - ./src/orchestrator:/app
+    env_file:
+    - .env
+
+
+  # scraper:
+  #   build: ./src/scraper
+  #   command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+  #   volumes:
+  #     - ./src/scraper:/app
+  #   deploy:
+  #     replicas: 5  # Define the number of service replicas
+
+  # lb-scraper:
+  #   image: nginx
+  #   ports:
+  #     - 8001:80
+  #   volumes:
+  #     - ./src/scraper/nginx.conf:/etc/nginx/nginx.conf  # Mount the Nginx configuration file
+  #   depends_on:
+  #     - scraper
+
+
+  frontend:
+    build: ./src/frontend
+    command: ["streamlit", "run", "main.py" ,"--server.port=80", "--server.address=0.0.0.0"]
+    ports:
+      - 8501:80
+    volumes:
+      - ./src/frontend:/app
+
+
+  cache:
+    image: redis/redis-stack
+    volumes:
+      - ./redis_data:/data:rw
+    ports:
+      - 6379:6379
+    restart: unless-stopped
+
+
+  # embeddings:
+  #   build: ./src/_embeddings
+  #   command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+  #   volumes:
+  #     - ./src/_embeddings:/app
+  #   ports:
+  #     - 8002:80
+
+
+  # lb-embeddings:
+  #   image: nginx
+  #   ports:
+  #     - 8003:80
+  #   volumes:
+  #     - ./src/_embeddings/nginx.conf:/etc/nginx/nginx.conf  # Mount the Nginx configuration file
+  #   depends_on:
+  #     - embeddings

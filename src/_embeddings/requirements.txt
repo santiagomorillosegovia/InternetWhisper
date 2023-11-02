@@ -1,0 +1,4 @@
+torch==2.0.1
+sentence_transformers
+uvicorn
+fastapi
